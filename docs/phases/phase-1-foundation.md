@@ -17,7 +17,9 @@
 
 ## Prerequisites
 
-- User provides an initial seed list of sources (RSS/docs/repos/newsletters).
+- [x] User provides an initial seed list of sources (RSS/docs/repos/
+  newsletters). See [`docs/sources.md`](../sources.md). Some feed URLs
+  still need verification during fetcher implementation.
 - User provides/configures an SMTP account (app password) for sending mail.
 - Desktop is backed up before dual-boot partitioning (data-loss risk).
 
