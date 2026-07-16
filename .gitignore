@@ -1,0 +1,18 @@
+# Secrets — never commit these
+.env
+.env.*
+*.secrets.*
+secrets.yml
+secrets.yaml
+secrets.json
+
+# OS / editor cruft
+.DS_Store
+*.swp
+
+# Common dependency / build dirs (added as the project grows)
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/

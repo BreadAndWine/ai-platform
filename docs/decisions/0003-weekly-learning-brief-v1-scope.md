@@ -16,9 +16,12 @@ follows:
 - **Pipeline**: NAS fetches and deduplicates source content; the
   summarization/curation step runs as an LLM inference job on the desktop
   (per ADR-0001/ADR-0002).
-- **Delivery**: output is sent via email, using an existing SMTP account
-  (e.g. an app password on a personal mail provider). No self-hosted mail
-  server in v1.
+- **Delivery**: output is sent via email, using an existing Gmail account
+  over SMTP (`smtp.gmail.com`, port 587/TLS), authenticated with a Google
+  App Password (requires 2-Step Verification enabled on the account). The
+  app password is stored in an environment variable or gitignored local
+  secrets file, never committed or hardcoded. No self-hosted mail server
+  in v1.
 - **Audience**: single user (the project owner) only.
 - **Latency**: batch/overnight is acceptable; no real-time requirement.
 
@@ -60,6 +63,10 @@ choice for v1.
 ## Consequences
 
 - User needs to supply an initial source list before phase 1 can be
-  completed end-to-end.
-- User needs to supply/configure an SMTP account (app password) for sending
-  the brief.
+  completed end-to-end. Done — see `docs/sources.md`.
+- User needs to generate a Google App Password (2-Step Verification must be
+  enabled first) for the chosen Gmail account, and store it as an
+  environment variable / gitignored secret, never in source control.
+- If Google ever deprecates app-password SMTP access for this account,
+  the mailer will need to move to OAuth2. Not a concern today; noted as a
+  possible future friction point.
