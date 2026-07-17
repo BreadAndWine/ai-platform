@@ -59,9 +59,12 @@ code — so public visibility is fine.
    - `docker logs ai-platform-orchestrator` should show a "Heartbeat: ..."
      line roughly every 60 seconds (configurable via
      `HEARTBEAT_INTERVAL_SECONDS`).
-   - Logs are also written to `/volume1/ai-platform/logs/orchestrator.log`
-     on the NAS's filesystem, so they persist across container restarts
-     and can be checked without going through Docker at all.
+   - Logs are also written to
+     `/volume1/docker/ai-platform-orchestrator/logs/orchestrator.log` on
+     the NAS's filesystem (matching the existing `/volume1/docker/<app>`
+     convention used for other containers on this NAS), so they persist
+     across container restarts and can be checked without going through
+     Docker at all.
 
 ## Resource constraints
 

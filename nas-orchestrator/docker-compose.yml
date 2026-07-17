@@ -10,7 +10,7 @@ services:
     environment:
       - HEARTBEAT_INTERVAL_SECONDS=60
     volumes:
-      - /volume1/ai-platform/logs:/app/logs
+      - /volume1/docker/ai-platform-orchestrator/logs:/app/logs
     # Hard memory cap. The NAS (Intel N100, 8GB RAM) runs with very little
     # free memory at idle (observed ~300MB free, swap already in active
     # use) — see docs/decisions/0001-hardware-topology-and-constraints.md.
