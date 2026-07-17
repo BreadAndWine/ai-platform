@@ -1,11 +1,16 @@
-# NAS Orchestrator
+# Aprendi
 
-Phase 1 skeleton for the NAS-side orchestrator (see
-`docs/phases/phase-1-foundation.md` and `docs/decisions/0002-compute-orchestration-model.md`).
-Currently just a heartbeat loop, proving the container runs reliably on
-the NAS within its memory constraints. Future phases will extend
-`app/main.py` with the real desktop state check, Wake-on-LAN, and source
-fetching logic.
+("I learned" — Portuguese.) The NAS-side orchestrator for this project.
+Named for the project's own learning priority (see `prompt.md`), not just
+its technical function — this component's job goes beyond waking the
+desktop: it will check desktop state, trigger and monitor inference jobs,
+handle retries/notifications, and eventually run the source-fetching
+pipeline for the Weekly Learning Brief. See `docs/phases/phase-1-foundation.md`
+and `docs/decisions/0002-compute-orchestration-model.md` for the full
+design this will grow into.
+
+Currently just a heartbeat loop (phase 1 skeleton), proving the container
+runs reliably on the NAS within its memory constraints.
 
 ## Why a pre-built image, not a build context
 
@@ -26,9 +31,9 @@ Silicon Mac (arm64), you must explicitly cross-build for `linux/amd64` —
 otherwise the image won't run on the NAS.
 
 ```bash
-cd nas-orchestrator
+cd aprendi
 docker buildx build --platform linux/amd64 \
-  -t ghcr.io/breadandwine/ai-platform-orchestrator:latest \
+  -t ghcr.io/breadandwine/aprendi:latest \
   --push .
 ```
 
@@ -45,10 +50,10 @@ not saved to any file in this repo.
 ## Package visibility
 
 The GHCR package must be set to **Public** (via GitHub → your profile →
-Packages → `ai-platform-orchestrator` → Package settings → Change
-visibility) so the NAS can pull it without needing registry credentials
-configured in UGOS. The image contains no secrets — only the orchestrator
-code — so public visibility is fine.
+Packages → `aprendi` → Package settings → Change visibility) so the NAS
+can pull it without needing registry credentials configured in UGOS. The
+image contains no secrets — only the orchestrator code — so public
+visibility is fine.
 
 ## Deploying on the NAS
 
@@ -56,12 +61,10 @@ code — so public visibility is fine.
 2. Paste the contents of `docker-compose.yml` from this folder.
 3. Deploy.
 4. Verify the container is running and logging:
-   - `docker logs ai-platform-orchestrator` should show a "Heartbeat: ..."
-     line roughly every 60 seconds (configurable via
-     `HEARTBEAT_INTERVAL_SECONDS`).
-   - Logs are also written to
-     `/volume1/docker/ai-platform-orchestrator/logs/orchestrator.log` on
-     the NAS's filesystem (matching the existing `/volume1/docker/<app>`
+   - `docker logs aprendi` should show a "Heartbeat: ..." line roughly
+     every 60 seconds (configurable via `HEARTBEAT_INTERVAL_SECONDS`).
+   - Logs are also written to `/volume1/docker/aprendi/logs/orchestrator.log`
+     on the NAS's filesystem (matching the existing `/volume1/docker/<app>`
      convention used for other containers on this NAS), so they persist
      across container restarts and can be checked without going through
      Docker at all.

@@ -1,16 +1,16 @@
 services:
-  orchestrator:
-    image: ghcr.io/breadandwine/ai-platform-orchestrator:latest
+  aprendi:
+    image: ghcr.io/breadandwine/aprendi:latest
     # Built and pushed from the dev machine via `docker buildx build
     # --platform linux/amd64 ... --push`, since the NAS's UGOS Docker UI
     # only supports pulling pre-built images, not a local build context.
-    # See nas-orchestrator/README.md for the full build/push process.
-    container_name: ai-platform-orchestrator
+    # See aprendi/README.md for the full build/push process.
+    container_name: aprendi
     restart: unless-stopped
     environment:
       - HEARTBEAT_INTERVAL_SECONDS=60
     volumes:
-      - /volume1/docker/ai-platform-orchestrator/logs:/app/logs
+      - /volume1/docker/aprendi/logs:/app/logs
     # Hard memory cap. The NAS (Intel N100, 8GB RAM) runs with very little
     # free memory at idle (observed ~300MB free, swap already in active
     # use) — see docs/decisions/0001-hardware-topology-and-constraints.md.
