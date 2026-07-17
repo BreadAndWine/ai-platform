@@ -70,3 +70,71 @@ better to delay or ask than to run at a bad time.
   on"? (email + manual step vs. some kind of local notification vs.
   automatic busy-detection). Not blocking phase 1 start, but must be
   resolved before the pipeline can run unattended.
+
+## Implementation Notes (Wake-on-LAN)
+
+Verified 2026-07-17.
+
+Wake-on-LAN was set up and tested end-to-end between a dev machine (Mac)
+and the desktop, standing in for the eventual NAS-to-desktop trigger.
+
+- **Desktop-side (Ubuntu) configuration**, three layers had to align:
+  1. **BIOS/UEFI**: "Wake on LAN" setting confirmed enabled (checked
+     manually, not scriptable/remote).
+  2. **NIC driver (live state)**: checked and set via `ethtool`:
+     ```
+     sudo ethtool enp4s0          # check current Wake-on state
+     sudo ethtool -s enp4s0 wol g # enable magic-packet wake
+     ```
+     `enp4s0` is this machine's NIC name (Ubuntu predictable naming); the
+     supported modes reported were `pumbg`, and `g` (magic packet) is the
+     one WoL depends on. This setting alone does **not** persist across
+     reboots — the NIC driver resets it, which is why the NetworkManager
+     step below was also needed.
+  3. **NetworkManager (persistent)**: the live `ethtool` change resets on
+     reboot unless also set at the connection-profile level:
+     ```
+     sudo nmcli connection modify netplan-enp4s0 \
+       802-3-ethernet.wake-on-lan magic
+     ```
+     `netplan-enp4s0` is the specific NetworkManager connection profile
+     name for this interface (find via `nmcli device show <iface>` and
+     look for `GENERAL.CONNECTION`). This is what makes the setting survive
+     reboots, since NetworkManager reapplies it whenever the interface
+     comes up.
+- **Desktop MAC address**: `d8:5e:d3:05:33:de` (interface `enp4s0`). Magic
+  packets target the MAC address, not an IP, since the machine has no
+  running OS/IP stack while powered off.
+- **Sudo scoping**: rather than granting broad passwordless sudo (a real
+  security downgrade on a network-reachable machine), specific commands
+  were whitelisted in `/etc/sudoers.d/marcelo-wol` via `visudo`:
+  ```
+  marcelo ALL=(ALL) NOPASSWD: /usr/sbin/ethtool
+  marcelo ALL=(ALL) NOPASSWD: /usr/bin/nmcli
+  marcelo ALL=(ALL) NOPASSWD: /usr/sbin/shutdown
+  ```
+  `shutdown` was added because the desktop will need to power itself off
+  after future automated jobs (per this ADR's decision), not just for this
+  test.
+- **Sender-side test** (from the dev machine, standing in for the NAS):
+  ```
+  brew install wakeonlan
+  wakeonlan -i 192.168.1.255 d8:5e:d3:05:33:de
+  ```
+  `-i 192.168.1.255` is the LAN's broadcast address; the magic packet is
+  sent to all devices on the subnet, and only the NIC matching the target
+  MAC address (in its low-power listening state) acts on it.
+- **Result**: desktop was shut down fully (`sudo shutdown -h now`),
+  confirmed offline (100% ping loss), magic packet sent from the dev
+  machine, desktop powered on and became reachable via ping and SSH within
+  ~30-45 seconds. Full end-to-end success, not just configuration without
+  a real test.
+
+## Remaining Work
+
+- This test used an ad hoc dev-machine SSH setup, not the NAS. The NAS
+  itself will need `wakeonlan` (or equivalent) installed and will need to
+  store the desktop's MAC address in its own orchestration config —
+  tracked as future work, not yet started.
+- The "ask permission if already on" mechanism (see Open Questions above)
+  is unrelated to WoL and remains unresolved.

@@ -10,9 +10,15 @@
   processing, confirmed GPU offload via Mesa RADV driver. ROCm was not
   needed — Vulkan performance is strong enough on the first attempt. See
   ADR-0001 implementation notes.
-- [ ] SSH key-based access from primary dev machine to desktop established
-  (done ad hoc during this session; not yet documented as a repeatable
-  setup step for NAS-to-desktop orchestration, see ADR-0002 open question).
+- [x] SSH key-based access from primary dev machine to desktop established
+  (ad hoc; not yet documented as a repeatable setup step for NAS-to-desktop
+  orchestration — see ADR-0002 open question, still unresolved).
+- [x] Wake-on-LAN established and verified end-to-end: desktop shut down
+  fully, magic packet sent from another machine on the LAN, desktop
+  powered on and booted into Ubuntu automatically. See ADR-0002
+  implementation notes.
+- [ ] "Ask permission if desktop already on" mechanism (ADR-0002's other
+  open question) — still unresolved, not yet started.
 - Establish Wake-on-LAN from NAS to desktop.
 - Stand up a minimal NAS-side orchestration skeleton (Docker-based
   scheduler/job runner) capable of fetching and deduplicating a small set of

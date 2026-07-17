@@ -20,3 +20,16 @@ does not use feature branches for now.
   the Jira footer requirement.
 - Revisit this file if the project later adopts Jira or branching (e.g. if
   collaborators join).
+
+
+## Explaining Commands (Learning Priority)
+
+This project's charter (`prompt.md`) prioritizes learning over speed. In
+practice this means:
+
+- When running non-trivial commands (anything beyond simple file reads or
+  obvious one-liners), explain *why* the command is being run and what it
+  checks/does before or alongside running it — not just the output.
+- Trivial commands (e.g. `cat`, `ls`, straightforward greps) don't need
+  explanation every time.
+- This applies throughout the project, not just to one session.
