@@ -1,0 +1,25 @@
+services:
+  orchestrator:
+    image: ghcr.io/breadandwine/ai-platform-orchestrator:latest
+    # Built and pushed from the dev machine via `docker buildx build
+    # --platform linux/amd64 ... --push`, since the NAS's UGOS Docker UI
+    # only supports pulling pre-built images, not a local build context.
+    # See nas-orchestrator/README.md for the full build/push process.
+    container_name: ai-platform-orchestrator
+    restart: unless-stopped
+    environment:
+      - HEARTBEAT_INTERVAL_SECONDS=60
+    volumes:
+      - /volume1/ai-platform/logs:/app/logs
+    # Hard memory cap. The NAS (Intel N100, 8GB RAM) runs with very little
+    # free memory at idle (observed ~300MB free, swap already in active
+    # use) — see docs/decisions/0001-hardware-topology-and-constraints.md.
+    # This limit ensures the orchestrator cannot make that worse; Docker
+    # will restart the container if it's ever exceeded rather than let it
+    # degrade the rest of the NAS.
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
