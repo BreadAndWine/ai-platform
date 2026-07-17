@@ -17,8 +17,13 @@
   fully, magic packet sent from another machine on the LAN, desktop
   powered on and booted into Ubuntu automatically. See ADR-0002
   implementation notes.
-- [ ] "Ask permission if desktop already on" mechanism (ADR-0002's other
-  open question) — still unresolved, not yet started.
+- [x] "Desktop already on" detection and retry policy decided (ping + SSH
+  port check to distinguish Ubuntu/Windows; email + next-day retry, skip
+  after 2 consecutive occupied-detections). GRUB configured to show a
+  10s menu defaulting to Ubuntu, so unattended WoL boots always land in
+  Linux. See ADR-0002. **Not yet implemented as a running script/job** —
+  decision captured, automation deferred until NAS orchestration skeleton
+  exists.
 - Establish Wake-on-LAN from NAS to desktop.
 - Stand up a minimal NAS-side orchestration skeleton (Docker-based
   scheduler/job runner) capable of fetching and deduplicating a small set of
