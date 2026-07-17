@@ -24,15 +24,19 @@
   Linux. See ADR-0002. **Not yet implemented as a running script/job** —
   decision captured, automation deferred until NAS orchestration skeleton
   exists.
-- Establish Wake-on-LAN from NAS to desktop.
-- Stand up a minimal NAS-side orchestration skeleton (Docker-based
-  scheduler/job runner) capable of fetching and deduplicating a small set of
-  sources.
-- Resolve the "desktop already on, is it actually free?" question well
-  enough to run the pipeline at least semi-attended.
-- Send one real, end-to-end Weekly Learning Brief email, generated from a
-  user-curated source list, using desktop-based inference and NAS-based
-  orchestration/delivery.
+- [x] Stand up a minimal NAS-side orchestration skeleton, named **Aprendi**
+  (see `aprendi/README.md`). Currently a heartbeat-loop container only,
+  verified running end-to-end on the actual NAS (built for linux/amd64,
+  pushed to ghcr.io, pulled and deployed via UGOS's Docker Compose UI,
+  logging on schedule confirmed). Real logic (desktop state check, WoL
+  trigger, source fetching/dedup) not yet implemented — this proves the
+  container/deployment pipeline works within the NAS's tight memory
+  constraints (128MB hard limit).
+- [ ] Send one real, end-to-end Weekly Learning Brief email, generated
+  from a user-curated source list, using desktop-based inference and
+  NAS-based orchestration/delivery. Not started — this is the remaining
+  phase 1 objective once Aprendi gains real logic (desktop state check,
+  WoL trigger, source fetch, summarization call, email delivery).
 
 ## Prerequisites
 
