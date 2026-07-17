@@ -5,8 +5,14 @@
 - Establish the minimal project documentation structure (ADRs, phase plan).
 - [x] Dual-boot Ubuntu 26.04 LTS installed on desktop (SATA SSD, separate
   from Windows' NVMe drive). See ADR-0001 implementation notes.
-- [ ] Working llama.cpp + ROCm or Vulkan backend on the RX 9070 XT
-  (verification not yet done — next step).
+- [x] Working llama.cpp + Vulkan backend on the RX 9070 XT, verified with
+  Qwen2.5-7B-Instruct Q4_K_M: 68.9 tok/s generation, 355.8 tok/s prompt
+  processing, confirmed GPU offload via Mesa RADV driver. ROCm was not
+  needed — Vulkan performance is strong enough on the first attempt. See
+  ADR-0001 implementation notes.
+- [ ] SSH key-based access from primary dev machine to desktop established
+  (done ad hoc during this session; not yet documented as a repeatable
+  setup step for NAS-to-desktop orchestration, see ADR-0002 open question).
 - Establish Wake-on-LAN from NAS to desktop.
 - Stand up a minimal NAS-side orchestration skeleton (Docker-based
   scheduler/job runner) capable of fetching and deduplicating a small set of

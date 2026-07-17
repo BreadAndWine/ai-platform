@@ -92,3 +92,42 @@ Completed 2026-07-17.
 - NVMe/Windows drive was not touched (no shrink was needed there; it also
   had insufficient free space for this purpose in any case, ~43GB free at
   the time of investigation).
+
+## Implementation Notes (GPU Inference Backend)
+
+Verified 2026-07-17.
+
+- **Backend chosen: Vulkan**, not ROCm. Vulkan was tried first per the
+  original risk assessment (ROCm 7.2's RDNA4 support was very recent and
+  Windows-side reports showed instability); Vulkan worked cleanly on the
+  first attempt via Mesa's RADV driver, so ROCm was not pursued further.
+  This can be revisited later if Vulkan proves limiting (e.g. missing
+  feature support for a specific model architecture), but for now it is
+  the working backend.
+- **Test result**: `llama.cpp` built with `-DGGML_VULKAN=1`, running
+  Qwen2.5-7B-Instruct (Q4_K_M quantization, ~4.5GB, downloaded from
+  Hugging Face) with `-ngl 99` (full GPU offload):
+  - Prompt processing: 355.8 tokens/sec
+  - Generation: 68.9 tokens/sec
+  - Confirmed GPU (not CPU fallback) via RADV driver output at startup.
+- This result comfortably supports the Weekly Learning Brief's
+  summarization workload, and does so well within the batch/overnight
+  latency tolerance established in ADR-0002 (i.e. this is fast enough that
+  latency is not a practical concern even before considering that
+  tolerance).
+- **Known warning, not a concern**: llama.cpp prints
+  `WARNING: radv is not a conformant Vulkan implementation, testing use
+  only` at startup. This is Mesa's standard disclaimer that RADV lacks
+  official Khronos conformance certification, not an indication of a
+  functional problem. Expected and can be ignored.
+- **Build layout note**: the `llama.cpp` repo was cloned to
+  `~/llama/llama.cpp` (nested one level under `~/llama`), so build/run
+  commands must be run from `~/llama/llama.cpp`, not `~/llama`. Worth
+  remembering if scripting this later.
+- **SSH access**: key-based SSH access from the primary dev machine to the
+  desktop (`marcelo@192.168.1.84`) was set up ad hoc during this debugging
+  session, to allow direct remote command execution instead of manual
+  copy-paste. This is a precursor to the NAS-to-desktop orchestration
+  needed per ADR-0002, but the *repeatable* setup process (e.g. for the
+  NAS itself to do this, not just a dev machine) is not yet documented as
+  a formal step — tracked as an open item.
