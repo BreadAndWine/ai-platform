@@ -3,8 +3,10 @@
 ## Objectives
 
 - Establish the minimal project documentation structure (ADRs, phase plan).
-- Get the desktop into a state where it can run GPU-accelerated LLM
-  inference (dual-boot Linux, working llama.cpp + ROCm or Vulkan backend).
+- [x] Dual-boot Ubuntu 26.04 LTS installed on desktop (SATA SSD, separate
+  from Windows' NVMe drive). See ADR-0001 implementation notes.
+- [ ] Working llama.cpp + ROCm or Vulkan backend on the RX 9070 XT
+  (verification not yet done — next step).
 - Establish Wake-on-LAN from NAS to desktop.
 - Stand up a minimal NAS-side orchestration skeleton (Docker-based
   scheduler/job runner) capable of fetching and deduplicating a small set of

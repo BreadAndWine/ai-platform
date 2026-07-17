@@ -65,3 +65,30 @@ architecture despite being intermittently available.
 - A wake/trigger mechanism (Wake-on-LAN) from NAS to desktop is required.
 - A mechanism to avoid degrading the user's gaming experience when the
   desktop is already powered on and in use is required (see ADR-0002).
+
+## Implementation Notes (Dual-Boot)
+
+Completed 2026-07-17.
+
+- **OS**: Ubuntu 26.04 LTS.
+- **Target disk**: the existing SATA SSD (2TB, ~700GB+ free at the time),
+  not the NVMe drive Windows lives on. This was a deliberate choice made
+  after discovering Windows updates can silently overwrite a shared EFI
+  System Partition and disable GRUB (a real, recurring issue, not
+  theoretical). Installing Linux on a physically separate drive with its
+  own ESP avoids this failure mode entirely, since Windows updates cannot
+  touch a different drive's ESP.
+- **Partition size**: ~160GB (160000 MB) allocated to Linux out of
+  ~1.2TB available shrinkable space on the SATA SSD, sized to comfortably
+  fit the OS, ROCm runtime, and multiple resident 7B-14B GGUF models
+  without needing to manage disk space tightly. Remaining space on that
+  drive (existing games/apps) was untouched by the shrink.
+- **Boot selection**: motherboard one-time boot menu (not GRUB
+  chainloading Windows) is used to choose between the NVMe (Windows) and
+  SATA SSD (Ubuntu) at power-on, keeping both boot chains fully
+  independent.
+- **Security**: login password set on the Ubuntu account, anticipating
+  future SSH-based orchestration from the NAS (see ADR-0002).
+- NVMe/Windows drive was not touched (no shrink was needed there; it also
+  had insufficient free space for this purpose in any case, ~43GB free at
+  the time of investigation).
