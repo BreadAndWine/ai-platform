@@ -21,9 +21,14 @@
   port check to distinguish Ubuntu/Windows; email + next-day retry, skip
   after 2 consecutive occupied-detections). GRUB configured to show a
   10s menu defaulting to Ubuntu, so unattended WoL boots always land in
-  Linux. See ADR-0002. **Not yet implemented as a running script/job** —
-  decision captured, automation deferred until NAS orchestration skeleton
-  exists.
+  Linux. See ADR-0002.
+- [x] Desktop state check + WoL logic implemented in Aprendi
+  (`aprendi/app/desktop.py`, `check_desktop.py`) and verified end-to-end
+  on the real NAS: shutdown -> WoL -> polling -> correctly detected
+  "linux" via SSH port check. Several NAS-specific issues fixed along the
+  way (ACLs, capability handling, host networking) — see ADR-0002
+  implementation notes. **Manual trigger only** — not yet on a schedule,
+  and the occupied/retry/email policy is decided but not yet coded.
 - [x] Stand up a minimal NAS-side orchestration skeleton, named **Aprendi**
   (see `aprendi/README.md`). Currently a heartbeat-loop container only,
   verified running end-to-end on the actual NAS (built for linux/amd64,

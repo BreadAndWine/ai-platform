@@ -199,11 +199,77 @@ and the desktop, standing in for the eventual NAS-to-desktop trigger.
   ~30-45 seconds. Full end-to-end success, not just configuration without
   a real test.
 
+## Implementation Notes (Aprendi: NAS-Side Desktop Check + WoL)
+
+Verified 2026-07-18. This replaces the earlier "ad hoc dev machine" setup
+with the real NAS-side implementation, in `aprendi/app/desktop.py` and
+`aprendi/app/check_desktop.py` (manual trigger only for now; not yet wired
+into a schedule).
+
+`check_and_wake()` implements exactly the logic decided above: ping-based
+reachability, WoL send if off, SSH port (22) check to distinguish
+Ubuntu/Windows once reachable. Verified end-to-end on the actual NAS
+(not a dev machine): desktop shut down, script run from inside the
+`aprendi` container's console, WoL sent, desktop detected `off` for ~40s
+then `linux` at 45s, script printed "Desktop is ONLINE running Ubuntu.
+Ready for jobs."
+
+### Issues hit and fixed along the way
+
+Several environment-specific problems had to be resolved before this
+worked — all fixed in `aprendi/Dockerfile` and `docker-compose.yml`, and
+worth remembering since they'll matter for any future container on this
+NAS, not just this one:
+
+1. **Docker Desktop for Mac cannot be used to test this logic.** Even with
+   `--network host`, containers run inside Docker Desktop's Linux VM on
+   Mac, which does not share the Mac's real network interfaces the way
+   native Linux Docker does. WoL sends appeared to succeed but
+   ping/port-checks back to LAN devices did not work reliably. Bare
+   Python (no container) on the Mac worked correctly and was used to
+   validate the logic itself before deploying to the NAS.
+2. **Docker's default bridge network isolates containers from the
+   physical LAN.** WoL requires broadcasting a UDP packet onto the real
+   network; this does not reliably escape the default bridge. Fixed with
+   `network_mode: host` in `docker-compose.yml` — matching the pattern
+   already used by this NAS's other LAN-dependent containers (e.g. Home
+   Assistant).
+3. **NAS storage uses POSIX ACLs (visible as a `+` suffix on `ls -la`
+   permission bits), which can override plain Unix permission bits.**
+   The container's non-root user (UID 1000) could not write to the
+   mounted log volume even after `chown`, because ACL entries scoped to
+   named NAS users/groups were still in effect. Fixed with
+   `setfacl -R -b` to strip ACLs from the specific mounted folder,
+   falling back to plain Unix permissions, before `chown`/`chmod`.
+4. **`cap_add: NET_RAW` at the container level was not sufficient on its
+   own** for a non-root process to open raw ICMP sockets via `ping`. The
+   `CAP_NET_RAW` file capability normally embedded in the Debian
+   `iputils-ping` binary does not reliably survive being copied into a
+   Docker image layer on this NAS's storage stack. Fixed by explicitly
+   running `setcap cap_net_raw+p /bin/ping` during the image build (while
+   still root, before switching to the non-root `aprendi` user), in
+   addition to `cap_add: NET_RAW` in compose.
+5. **Wake time is ~35-45 seconds in practice** (including the 10s GRUB
+   menu delay from this ADR's boot-default decision). The default
+   `wake_wait_seconds` was increased from an initial 45s to 90s for
+   comfortable margin.
+
+### Non-root container design
+
+The `aprendi` container runs as a dedicated non-root user (UID/GID 1000),
+not root, per least-privilege — see Dockerfile comments. This is a
+deliberate choice given the container's scope will grow (source fetching,
+eventually triggering jobs on the desktop), even though today's
+networking-only workload has low inherent risk.
+
 ## Remaining Work
 
-- This test used an ad hoc dev-machine SSH setup, not the NAS. The NAS
-  itself will need `wakeonlan` (or equivalent) installed and will need to
-  store the desktop's MAC address in its own orchestration config —
-  tracked as future work, not yet started.
-- The "ask permission if already on" mechanism (see Open Questions above)
-  is unrelated to WoL and remains unresolved.
+- This logic is implemented but only manually triggered
+  (`docker exec` / container console → `python check_desktop.py`). It is
+  not yet wired into a schedule, and the occupied/retry/email policy
+  decided above is not yet implemented in code.
+- The GHCR-based build/push/redeploy loop (dev machine builds for
+  linux/amd64, pushes to ghcr.io, NAS redeploys) works but requires a full
+  compose redeploy — not just a container restart — for code, environment
+  variable, or capability changes to take effect. Worth remembering for
+  future iteration speed.
