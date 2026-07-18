@@ -37,11 +37,16 @@
   trigger, source fetching/dedup) not yet implemented — this proves the
   container/deployment pipeline works within the NAS's tight memory
   constraints (128MB hard limit).
+- [x] Gmail SMTP email delivery working, verified with a real test email
+  sent and received via `aprendi/app/mailer.py` /
+  `send_test_email.py`. See ADR-0003 implementation notes for the
+  `env_file` vs. `${...}` substitution deployment detail.
 - [ ] Send one real, end-to-end Weekly Learning Brief email, generated
   from a user-curated source list, using desktop-based inference and
-  NAS-based orchestration/delivery. Not started — this is the remaining
-  phase 1 objective once Aprendi gains real logic (desktop state check,
-  WoL trigger, source fetch, summarization call, email delivery).
+  NAS-based orchestration/delivery. Not started — remaining pieces:
+  source fetch/dedup, triggering summarization on the desktop, and
+  wiring the desktop-check + mailer into an actual schedule with the
+  ADR-0002 occupied/retry policy.
 
 ## Prerequisites
 

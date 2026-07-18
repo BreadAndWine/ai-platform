@@ -70,3 +70,20 @@ choice for v1.
 - If Google ever deprecates app-password SMTP access for this account,
   the mailer will need to move to OAuth2. Not a concern today; noted as a
   possible future friction point.
+
+## Implementation Notes (Mailer)
+
+Verified 2026-07-18. `aprendi/app/mailer.py` implements `send_email()` via
+`smtplib` + STARTTLS to `smtp.gmail.com:587`, reading credentials
+(`GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD`, `BRIEF_RECIPIENT_EMAIL`) from
+environment variables only. A test email was sent and received
+successfully via `aprendi/app/send_test_email.py`, run manually from the
+container console.
+
+**Deployment detail worth remembering**: `${VAR}` substitution inside a
+compose file's `environment:` block did not work when the compose file is
+pasted directly into UGOS's Docker Compose UI (values came through empty).
+Switched to `env_file: [.env]` instead — the same pattern already used
+successfully by this NAS's separate Immich deployment — which does work.
+`.env` lives only on the NAS (gitignored); `.env.example` in the repo
+documents the required keys with no real values.
