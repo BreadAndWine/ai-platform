@@ -11,10 +11,17 @@ FROM python:3.13-slim
 
 # iputils-ping provides the `ping` binary used by app/desktop.py to check
 # desktop reachability (Python can't easily send raw ICMP without root;
-# shelling out to `ping` is the standard approach, and the Debian package
-# retains the capability bit needed to do this without full root).
+# shelling out to `ping` is the standard approach). libcap2-bin provides
+# `setcap`, used below to explicitly grant the ping binary the CAP_NET_RAW
+# file capability it needs to open raw sockets as a non-root user — on
+# a normal Debian host this capability is usually already present on the
+# package's binary, but it does not reliably survive being copied into a
+# Docker image layer on this NAS's storage stack, so it's set explicitly
+# here instead of relying on it being inherited from the package.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends iputils-ping \
+    && apt-get install -y --no-install-recommends iputils-ping libcap2-bin \
+    && setcap cap_net_raw+p /bin/ping \
+    && apt-get purge -y --auto-remove libcap2-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # Run as a non-root user. This container currently only does networking
