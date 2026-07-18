@@ -76,3 +76,23 @@ The NAS has very little free memory at idle (observed ~300MB free out of
 notes). `docker-compose.yml` sets a hard `mem_limit: 128m` on this
 container so it cannot make that worse; if ever exceeded, Docker restarts
 the container rather than let it degrade the rest of the NAS.
+
+
+## Email Credentials (.env)
+
+Copy `.env.example` to `.env` in this folder and fill in real values.
+`.env` is gitignored and must never be committed.
+
+`docker-compose.yml` references these via `${GMAIL_ADDRESS}` etc., which
+standard `docker compose` substitutes automatically from a `.env` file in
+the same directory when run from the command line.
+
+**If deploying via UGOS's Docker Compose paste-in UI**: it's not
+confirmed whether UGOS's backend performs the same automatic `.env`
+substitution when a compose file is pasted directly (rather than run from
+a real folder via CLI). If the container fails to start or logs show
+missing/empty values for `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD`, or
+`BRIEF_RECIPIENT_EMAIL`, check whether UGOS's UI has its own separate
+"Environment Variables" input field — if so, enter the values there
+directly instead of relying on `.env` substitution, and remove the
+`env_file`/`${...}` reliance for this deployment.

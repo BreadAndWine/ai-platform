@@ -30,6 +30,12 @@ services:
       - DESKTOP_IP=192.168.1.84
       - DESKTOP_MAC=d8:5e:d3:05:33:de
       - LAN_BROADCAST_IP=192.168.1.255
+      # Email credentials — pulled from .env (gitignored, NAS-only), never
+      # hardcoded here. See .env.example for the required values and
+      # docs/decisions/0003-weekly-learning-brief-v1-scope.md for context.
+      - GMAIL_ADDRESS=${GMAIL_ADDRESS}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+      - BRIEF_RECIPIENT_EMAIL=${BRIEF_RECIPIENT_EMAIL}
     volumes:
       - /volume1/docker/aprendi/logs:/app/logs
     # Hard memory cap. The NAS (Intel N100, 8GB RAM) runs with very little
