@@ -14,6 +14,15 @@ services:
     # network interface, the same way this NAS's other containers (e.g.
     # Home Assistant) use network_mode: host for similar LAN-level needs.
     network_mode: host
+    # Required for the `ping` command to create raw ICMP sockets as a
+    # non-root user. Without this, ping fails with "Operation not
+    # permitted" even though the iputils-ping package is installed,
+    # because the capability normally embedded in the ping binary doesn't
+    # survive being copied into a Docker image layer on this host. This
+    # grants only the specific capability needed, not full root/privileged
+    # access — a much narrower grant than `privileged: true`.
+    cap_add:
+      - NET_RAW
     environment:
       - HEARTBEAT_INTERVAL_SECONDS=60
       # Desktop network details, verified during Wake-on-LAN testing
