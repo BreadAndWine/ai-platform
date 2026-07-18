@@ -262,12 +262,47 @@ deliberate choice given the container's scope will grow (source fetching,
 eventually triggering jobs on the desktop), even though today's
 networking-only workload has low inherent risk.
 
+## Implementation Notes (Occupied-Retry Policy)
+
+Verified 2026-07-18. `aprendi/app/job.py` (`run_availability_check()`)
+composes `desktop.py` + `mailer.py` + a new `state.py` module into the
+full policy decided above:
+
+- Persistent state (`job_state.json`, on the same mounted log volume) so
+  the consecutive-occupied counter survives container restarts between
+  attempts — without this, a restart between two occupied days would
+  silently reset the counter and the skip-after-2 policy would never
+  trigger.
+- Full ISO datetime (not just date) is recorded for each attempt, for
+  better diagnostics and to support future scheduling sanity checks.
+
+All three scenarios were tested manually via `run_job_check.py` (a new
+manual trigger, distinct from `check_desktop.py` which only detects/wakes
+without applying the retry policy) and confirmed working:
+
+1. **Happy path**: desktop off/Ubuntu → detected/woken, confirmed ready,
+   no email sent, counter reset.
+2. **First occupied detection**: desktop on Windows → "delayed, retrying
+   tomorrow" email sent, counter set to 1.
+3. **Second consecutive occupied detection**: desktop still on Windows →
+   "skipped this week" email sent instead, counter reset to 0.
+
+**Known simplification, deliberate**: the policy counts *consecutive
+occupied detections*, not real elapsed time between attempts — running
+the check twice in a row (as in manual testing) triggers the "skip" case
+immediately, rather than requiring a real day to pass. This is fine in
+practice since the eventual production schedule will only run once daily,
+but is a known gap if this logic is ever invoked more than once per day
+for a reason other than testing.
+
 ## Remaining Work
 
-- This logic is implemented but only manually triggered
-  (`docker exec` / container console → `python check_desktop.py`). It is
-  not yet wired into a schedule, and the occupied/retry/email policy
-  decided above is not yet implemented in code.
+- This logic (`job.py` / `run_job_check.py`) is implemented and verified
+  in all 3 policy scenarios, but is still only manually triggered — not
+  yet wired into an actual daily schedule.
+- No handling yet for the `unreachable_after_wake` case (desktop doesn't
+  respond to WoL at all) — currently logged only, not emailed, and not
+  folded into the occupied-retry counter. Open item.
 - The GHCR-based build/push/redeploy loop (dev machine builds for
   linux/amd64, pushes to ghcr.io, NAS redeploys) works but requires a full
   compose redeploy — not just a container restart — for code, environment

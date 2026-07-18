@@ -27,8 +27,13 @@
   on the real NAS: shutdown -> WoL -> polling -> correctly detected
   "linux" via SSH port check. Several NAS-specific issues fixed along the
   way (ACLs, capability handling, host networking) — see ADR-0002
-  implementation notes. **Manual trigger only** — not yet on a schedule,
-  and the occupied/retry/email policy is decided but not yet coded.
+  implementation notes.
+- [x] Occupied-retry policy from ADR-0002 fully implemented
+  (`aprendi/app/job.py`, `state.py`, `run_job_check.py`) and verified in
+  all 3 scenarios: happy path (ready, no email), first occupied detection
+  (retry-tomorrow email), second consecutive occupied detection
+  (skip-this-week email, counter reset). **Manual trigger only** — not
+  yet wired into an actual daily schedule.
 - [x] Stand up a minimal NAS-side orchestration skeleton, named **Aprendi**
   (see `aprendi/README.md`). Currently a heartbeat-loop container only,
   verified running end-to-end on the actual NAS (built for linux/amd64,
@@ -45,8 +50,8 @@
   from a user-curated source list, using desktop-based inference and
   NAS-based orchestration/delivery. Not started — remaining pieces:
   source fetch/dedup, triggering summarization on the desktop, and
-  wiring the desktop-check + mailer into an actual schedule with the
-  ADR-0002 occupied/retry policy.
+  wiring `job.py` into an actual daily/weekly schedule (rather than
+  manual trigger).
 
 ## Prerequisites
 
