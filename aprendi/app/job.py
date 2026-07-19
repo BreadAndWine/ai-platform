@@ -22,6 +22,7 @@ actually running that job.
 
 import datetime
 import logging
+from zoneinfo import ZoneInfo
 
 from desktop import check_and_wake
 from mailer import send_email
@@ -29,9 +30,15 @@ from state import load_state, save_state
 
 logger = logging.getLogger("aprendi.job")
 
+# Matches scheduler.py's SCHEDULE_TIMEZONE — kept consistent so a week
+# boundary (Sunday night -> Monday) is computed the same way in both
+# places, using the user's real local timezone rather than the
+# container's default (UTC).
+_TIMEZONE = ZoneInfo("Europe/Lisbon")
+
 
 def _now() -> str:
-    return datetime.datetime.now().isoformat()
+    return datetime.datetime.now(_TIMEZONE).isoformat()
 
 
 def _current_week_key() -> str:
@@ -41,7 +48,7 @@ def _current_week_key() -> str:
     proceeded or explicitly skipped), so the scheduler doesn't need to
     re-run a week that's already been handled.
     """
-    year, week, _ = datetime.date.today().isocalendar()
+    year, week, _ = datetime.datetime.now(_TIMEZONE).date().isocalendar()
     return f"{year}-W{week:02d}"
 
 

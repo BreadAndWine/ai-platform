@@ -41,6 +41,12 @@ services:
       - .env
     volumes:
       - /volume1/docker/aprendi/logs:/app/logs
+      # Aprendi's dedicated SSH private key, used to remotely shut down
+      # the desktop after confirming it's done being needed. Mounted
+      # read-only from the NAS host, never baked into the image or
+      # committed. See README.md for how to generate and authorize this
+      # key on the desktop.
+      - /volume1/docker/aprendi/ssh:/app/ssh:ro
     # Hard memory cap. The NAS (Intel N100, 8GB RAM) runs with very little
     # free memory at idle (observed ~300MB free, swap already in active
     # use) — see docs/decisions/0001-hardware-topology-and-constraints.md.

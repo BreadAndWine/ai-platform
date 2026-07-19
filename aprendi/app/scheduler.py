@@ -12,27 +12,38 @@ interval (default 60s) — acceptable for a weekly job.
 
 import datetime
 import logging
+from zoneinfo import ZoneInfo
 
+from desktop import shutdown
 from job import is_week_already_resolved, run_availability_check
 from state import load_state, save_state
 
 logger = logging.getLogger("aprendi.scheduler")
+
+# Explicit timezone, not relying on the container's system TZ. The user
+# is in Portugal, which is UTC+0 in winter and UTC+1 in summer (DST) —
+# a fixed offset would drift wrong twice a year, so this uses the real
+# IANA timezone database (via zoneinfo) to handle DST correctly.
+SCHEDULE_TIMEZONE = ZoneInfo("Europe/Lisbon")
 
 # Saturday=5, Sunday=6 in Python's date.weekday() (Monday=0).
 SCHEDULED_WEEKDAYS = {5, 6}
 SCHEDULED_HOUR = 2
 
 
+def _now() -> datetime.datetime:
+    return datetime.datetime.now(SCHEDULE_TIMEZONE)
+
+
 def _current_slot() -> str:
     """A per-hour identifier, e.g. '2026-07-18-02', used to ensure the
     heartbeat loop only triggers one check per scheduled hour, not once
     per heartbeat tick within that hour."""
-    now = datetime.datetime.now()
-    return now.strftime("%Y-%m-%d-%H")
+    return _now().strftime("%Y-%m-%d-%H")
 
 
 def _is_scheduled_now() -> bool:
-    now = datetime.datetime.now()
+    now = _now()
     return now.weekday() in SCHEDULED_WEEKDAYS and now.hour == SCHEDULED_HOUR
 
 
@@ -74,3 +85,10 @@ def run_scheduled_check_if_due(
             "fetching, summarization, and brief sending would run — "
             "not yet implemented."
         )
+        # No real job exists yet to run before shutting down. Shutting
+        # down immediately here (rather than leaving the desktop running
+        # indefinitely) keeps it as a true on-demand resource per
+        # ADR-0001/0002, rather than requiring the user to remember to
+        # turn it off manually. Once a real pipeline exists, this call
+        # should move to after that pipeline completes, not before it.
+        shutdown(ip_address)

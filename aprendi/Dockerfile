@@ -18,8 +18,14 @@ FROM python:3.13-slim
 # package's binary, but it does not reliably survive being copied into a
 # Docker image layer on this NAS's storage stack, so it's set explicitly
 # here instead of relying on it being inherited from the package.
+# tzdata provides the IANA timezone database, required for Python's
+# zoneinfo module to resolve "Europe/Lisbon" (used by scheduler.py /
+# job.py for correct local-time scheduling, including DST handling).
+# openssh-client provides the `ssh` binary, used by desktop.py's
+# shutdown() to remotely shut down the desktop after a job.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends iputils-ping libcap2-bin \
+    && apt-get install -y --no-install-recommends \
+        iputils-ping libcap2-bin tzdata openssh-client \
     && setcap cap_net_raw+p /bin/ping \
     && apt-get purge -y --auto-remove libcap2-bin \
     && rm -rf /var/lib/apt/lists/*

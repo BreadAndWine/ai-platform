@@ -28,6 +28,14 @@ WOL_PORT = 9
 
 SSH_PORT = 22
 
+# Path (inside the container) to Aprendi's dedicated SSH private key,
+# used to shut the desktop down remotely. Mounted from the NAS host, not
+# baked into the image — see docker-compose.yml and README.md for setup.
+# This is a separate keypair from any personal SSH key, scoped only to
+# what Aprendi needs (currently: running `sudo shutdown` on the desktop).
+SSH_KEY_PATH = "/app/ssh/aprendi_id_ed25519"
+SSH_USER = "marcelo"
+
 
 def send_wol(mac_address: str, broadcast_ip: str) -> None:
     """Send a Wake-on-LAN magic packet to wake the target machine.
@@ -137,3 +145,43 @@ def check_and_wake(
         wake_wait_seconds,
     )
     return "unreachable_after_wake"
+
+
+def shutdown(ip_address: str) -> bool:
+    """SSH into the desktop and shut it down.
+
+    Requires Aprendi's dedicated SSH key to be present at SSH_KEY_PATH
+    and authorized on the desktop, and requires the desktop's sudoers to
+    allow passwordless `shutdown` for SSH_USER (already configured during
+    Wake-on-LAN setup — see ADR-0002 implementation notes). Returns True
+    if the SSH command was accepted, False on any failure (logged, not
+    raised — a failed shutdown attempt should not crash the caller).
+    """
+    try:
+        result = subprocess.run(
+            [
+                "ssh",
+                "-i", SSH_KEY_PATH,
+                "-o", "StrictHostKeyChecking=accept-new",
+                "-o", "ConnectTimeout=10",
+                f"{SSH_USER}@{ip_address}",
+                "sudo shutdown -h now",
+            ],
+            capture_output=True,
+            timeout=15,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        logger.error(
+            "Failed to run shutdown command (%s).", type(exc).__name__
+        )
+        return False
+
+    if result.returncode != 0:
+        logger.error(
+            "Shutdown command returned non-zero exit code %s.",
+            result.returncode,
+        )
+        return False
+
+    logger.info("Shutdown command sent to desktop successfully.")
+    return True

@@ -96,3 +96,42 @@ missing/empty values for `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD`, or
 "Environment Variables" input field — if so, enter the values there
 directly instead of relying on `.env` substitution, and remove the
 `env_file`/`${...}` reliance for this deployment.
+
+
+## Desktop Shutdown Key (one-time setup)
+
+After a scheduled job confirms the desktop is ready (see scheduler.py),
+Aprendi shuts it back down via SSH, since no real job pipeline exists yet
+to run first. This requires a dedicated SSH keypair — not your personal
+key — authorized on the desktop.
+
+On the NAS, generate a keypair and place it where the compose file
+expects it:
+
+```bash
+mkdir -p /volume1/docker/aprendi/ssh
+ssh-keygen -t ed25519 -f /volume1/docker/aprendi/ssh/aprendi_id_ed25519 -N "" -C "aprendi@nas"
+```
+
+(`-N ""` means no passphrase — required since this key needs to be used
+unattended by a scheduled job with no human to type a passphrase.)
+
+Copy the **public** key's contents (`aprendi_id_ed25519.pub`) to the
+desktop's `~/.ssh/authorized_keys` (append, don't overwrite, if other
+keys are already authorized there):
+
+```bash
+cat /volume1/docker/aprendi/ssh/aprendi_id_ed25519.pub
+# paste the output into ~/.ssh/authorized_keys on the desktop
+```
+
+The private key directory is mounted read-only into the container at
+`/app/ssh` (see `docker-compose.yml`). Ensure the private key file is
+readable by UID 1000 (Aprendi's container user) — same ACL/permission
+considerations as the log volume; see `docs/decisions/0002-compute-orchestration-model.md`
+implementation notes if this needs troubleshooting.
+
+The desktop's sudoers already allows passwordless `shutdown` for this
+user (`/etc/sudoers.d/marcelo-wol`, set up during original Wake-on-LAN
+configuration), so no further desktop-side changes are needed for the
+shutdown command itself to work.
