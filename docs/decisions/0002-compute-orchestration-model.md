@@ -295,11 +295,69 @@ practice since the eventual production schedule will only run once daily,
 but is a known gap if this logic is ever invoked more than once per day
 for a reason other than testing.
 
+## Implementation Notes (Scheduling)
+
+Verified 2026-07-19. `aprendi/app/scheduler.py`, driven by the existing
+`main.py` heartbeat loop (no separate cron process — see this ADR's
+earlier reasoning for preferring the simpler option), checks on every
+heartbeat tick whether it's the scheduled time and triggers
+`run_availability_check()` if so.
+
+**Schedule**: first attempt Saturday 2am, retry Sunday 2am if occupied
+(per the existing occupied-retry policy), giving a full weekend of buffer
+before a brief would be sent Monday — the user's choice, to maximize
+recovery time before the week starts.
+
+**Dedup logic**, both verified working:
+- `resolved_for_week` (ISO year-week) prevents re-attempting a week that
+  already succeeded or was explicitly skipped.
+- `last_checked_slot` (date+hour) prevents the heartbeat loop (ticking
+  every ~60s) from re-triggering the check repeatedly within the same
+  scheduled hour.
+
+Tested by temporarily overriding `SCHEDULED_HOUR` to the current hour
+(since waiting for an actual Saturday/Sunday 2am wasn't practical) and
+calling `run_scheduled_check_if_due()` directly from the container
+console. First call correctly woke the desktop and detected it ready;
+second call within the same hour correctly did nothing (silent, by
+design — the only path with no log statement).
+
+### Bug found and fixed along the way: Windows Fast Startup broke WoL
+
+During this testing, a real regression was found: after a Windows update,
+the desktop stopped waking via WoL entirely (timed out after 90s). Linux
+side (`ethtool`) still correctly showed `Wake-on: g` — ruling out anything
+this project had configured. The actual cause was **Windows Fast
+Startup**, confirmed via `powercfg /devicequery wake_armed` showing only
+mouse/keyboard devices, not the Ethernet NIC — meaning Windows had not
+armed the NIC to wake the system at all, regardless of what Device
+Manager's (misleadingly greyed-out) checkboxes appeared to show.
+
+Fast Startup makes shutdown behave like a partial hibernation rather than
+a true power-off, which can prevent network adapters from being armed for
+wake. It's also a known cause of dual-boot filesystem issues (NTFS can be
+left in a "not fully unmounted" state, causing mount problems or rarer
+corruption when accessed from Linux) — a second, independent reason to
+disable it in a dual-boot setup regardless of the WoL issue.
+
+**Fix**: disabled Fast Startup via Control Panel → Power Options →
+"Choose what the power buttons do" → "Change settings that are currently
+unavailable" → uncheck "Turn on fast startup (recommended)". After a full
+shutdown (not restart) with this disabled, the NIC appeared correctly in
+`wake_armed`, and WoL worked again.
+
+**Takeaway for future debugging**: `powercfg /devicequery wake_armed` is
+the authoritative way to check Windows-side wake-arming status — Device
+Manager's Power Management tab checkboxes can appear checked/greyed-out
+in a way that does not reliably reflect actual armed state.
+
 ## Remaining Work
 
-- This logic (`job.py` / `run_job_check.py`) is implemented and verified
-  in all 3 policy scenarios, but is still only manually triggered — not
-  yet wired into an actual daily schedule.
+- The scheduler and occupied-retry policy are both implemented and
+  verified. What's still missing is the actual Weekly Learning Brief
+  pipeline itself (source fetch/dedup, triggering summarization on the
+  desktop, assembling and sending the real brief) — currently only a
+  placeholder log line runs when the desktop is confirmed ready.
 - No handling yet for the `unreachable_after_wake` case (desktop doesn't
   respond to WoL at all) — currently logged only, not emailed, and not
   folded into the occupied-retry counter. Open item.

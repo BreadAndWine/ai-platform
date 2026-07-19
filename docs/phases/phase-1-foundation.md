@@ -32,8 +32,16 @@
   (`aprendi/app/job.py`, `state.py`, `run_job_check.py`) and verified in
   all 3 scenarios: happy path (ready, no email), first occupied detection
   (retry-tomorrow email), second consecutive occupied detection
-  (skip-this-week email, counter reset). **Manual trigger only** — not
-  yet wired into an actual daily schedule.
+  (skip-this-week email, counter reset).
+- [x] Scheduling wired into the heartbeat loop (`aprendi/app/scheduler.py`):
+  first attempt Saturday 2am, retry Sunday 2am if occupied. Dedup logic
+  (per-week and per-hour) verified working. Found and fixed a real bug
+  along the way — Windows Fast Startup (re-enabled by a Windows update)
+  was preventing the NIC from being wake-armed at all; disabled, also
+  reduces dual-boot filesystem risk. See ADR-0002 implementation notes.
+  **The actual brief-generation pipeline still does not exist** — the
+  scheduler currently only confirms desktop readiness and logs a
+  placeholder.
 - [x] Stand up a minimal NAS-side orchestration skeleton, named **Aprendi**
   (see `aprendi/README.md`). Currently a heartbeat-loop container only,
   verified running end-to-end on the actual NAS (built for linux/amd64,
