@@ -126,10 +126,23 @@ cat /volume1/docker/aprendi/ssh/aprendi_id_ed25519.pub
 ```
 
 The private key directory is mounted read-only into the container at
-`/app/ssh` (see `docker-compose.yml`). Ensure the private key file is
-readable by UID 1000 (Aprendi's container user) — same ACL/permission
-considerations as the log volume; see `docs/decisions/0002-compute-orchestration-model.md`
-implementation notes if this needs troubleshooting.
+`/app/ssh` (see `docker-compose.yml`). The private key file must be:
+- Owned by UID 1000 (Aprendi's container user), not the NAS shell user
+  that generated it — SSH inside the container cannot read a key owned
+  by a different user.
+- Permission `600` (owner read/write only) — SSH refuses to use a key
+  with broader permissions ("UNPROTECTED PRIVATE KEY FILE" warning).
+
+```bash
+sudo chown 1000:1000 /volume1/docker/aprendi/ssh/aprendi_id_ed25519
+sudo chmod 600 /volume1/docker/aprendi/ssh/aprendi_id_ed25519
+sudo chmod 755 /volume1/docker/aprendi/ssh
+```
+
+If this NAS's ACL layer overrides these (as it did for the log volume —
+see `docs/decisions/0002-compute-orchestration-model.md` implementation
+notes), strip ACLs first with `sudo setfacl -R -b /volume1/docker/aprendi/ssh`
+before the commands above.
 
 The desktop's sudoers already allows passwordless `shutdown` for this
 user (`/etc/sudoers.d/marcelo-wol`, set up during original Wake-on-LAN

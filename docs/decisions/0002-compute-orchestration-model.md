@@ -351,13 +351,53 @@ the authoritative way to check Windows-side wake-arming status — Device
 Manager's Power Management tab checkboxes can appear checked/greyed-out
 in a way that does not reliably reflect actual armed state.
 
+## Implementation Notes (Automatic Shutdown + Timezone)
+
+Verified 2026-07-19.
+
+**Timezone**: `scheduler.py` and `job.py` use Python's `zoneinfo` with an
+explicit `Europe/Lisbon` timezone (not the container's default UTC),
+correctly handling DST (confirmed `+01:00` / WEST offset at test time).
+`tzdata` added to the Dockerfile to provide the IANA timezone database
+`zoneinfo` depends on.
+
+**Automatic shutdown**: since no real brief-generation pipeline exists
+yet, leaving the desktop running indefinitely after a successful wake
+would defeat the point of treating it as an on-demand resource (ADR-0001)
+and require the user to remember to shut it down manually every time.
+`desktop.shutdown()` now SSHes into the desktop (as a dedicated Aprendi
+keypair, not the user's personal key) and runs `sudo shutdown -h now`,
+relying on the passwordless-shutdown sudoers rule already configured
+during original WoL setup. Called immediately after a successful
+readiness check in `scheduler.py`; this will move to "after the real job
+completes" once a pipeline exists, rather than immediately after
+readiness.
+
+Setup required a dedicated SSH keypair, generated on the NAS and
+authorized on the desktop's `~/.ssh/authorized_keys`, mounted read-only
+into the container. Two permission issues were hit and fixed along the
+way, both consistent with earlier ACL/permission findings on this NAS:
+
+1. SSH refuses to use a private key with overly-open permissions
+   ("UNPROTECTED PRIVATE KEY FILE" warning) — fixed with `chmod 600` on
+   the key file.
+2. The container's non-root user (UID 1000) could not read the key even
+   after that, since it was owned by the NAS shell user, not UID 1000 —
+   fixed with `chown 1000:1000` on the key file specifically (no ACL
+   stripping needed this time, unlike the log volume earlier).
+
+End-to-end verified: manually triggered a scheduled check, desktop woke
+and was confirmed ready, then powered itself off automatically — no
+manual shutdown needed.
+
 ## Remaining Work
 
-- The scheduler and occupied-retry policy are both implemented and
-  verified. What's still missing is the actual Weekly Learning Brief
-  pipeline itself (source fetch/dedup, triggering summarization on the
-  desktop, assembling and sending the real brief) — currently only a
-  placeholder log line runs when the desktop is confirmed ready.
+- The scheduler, occupied-retry policy, and automatic post-check shutdown
+  are all implemented and verified. What's still missing is the actual
+  Weekly Learning Brief pipeline itself (source fetch/dedup, triggering
+  summarization on the desktop, assembling and sending the real brief) —
+  currently the desktop just shuts back down right after being confirmed
+  ready, with no job run in between.
 - No handling yet for the `unreachable_after_wake` case (desktop doesn't
   respond to WoL at all) — currently logged only, not emailed, and not
   folded into the occupied-retry counter. Open item.
