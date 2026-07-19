@@ -22,6 +22,16 @@ DEFAULT_STATE = {
     # ISO 8601 datetime string, e.g. "2026-07-18T02:00:14.123456"
     "last_attempt_at": None,
     "consecutive_occupied_attempts": 0,
+    # ISO year-week string, e.g. "2026-W29". Set when a week's job either
+    # proceeds successfully or is explicitly skipped (2 consecutive
+    # occupied attempts) — i.e. when the week is "resolved" and the
+    # scheduler should not attempt it again until next week.
+    "resolved_for_week": None,
+    # "<date>-<hour>" string, e.g. "2026-07-18-02". Set every time the
+    # scheduler runs a check attempt (regardless of outcome), so the
+    # heartbeat loop (firing every ~60s) doesn't re-trigger the check
+    # repeatedly within the same scheduled hour.
+    "last_checked_slot": None,
 }
 
 

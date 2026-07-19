@@ -34,6 +34,24 @@ def _now() -> str:
     return datetime.datetime.now().isoformat()
 
 
+def _current_week_key() -> str:
+    """Return an ISO year-week identifier, e.g. '2026-W29'.
+
+    Used to track which week's job has already been resolved (either
+    proceeded or explicitly skipped), so the scheduler doesn't need to
+    re-run a week that's already been handled.
+    """
+    year, week, _ = datetime.date.today().isocalendar()
+    return f"{year}-W{week:02d}"
+
+
+def is_week_already_resolved() -> bool:
+    """Check whether this week's job has already been resolved (ran
+    successfully or was explicitly skipped after 2 occupied attempts)."""
+    state = load_state()
+    return state.get("resolved_for_week") == _current_week_key()
+
+
 def run_availability_check(
     ip_address: str, mac_address: str, broadcast_ip: str
 ) -> bool:
@@ -57,6 +75,7 @@ def run_availability_check(
         # future streak.
         state["consecutive_occupied_attempts"] = 0
         state["last_attempt_at"] = now
+        state["resolved_for_week"] = _current_week_key()
         save_state(state)
         return True
 
@@ -100,6 +119,7 @@ def _handle_occupied(state: dict, now: str) -> bool:
             ),
         )
         state["consecutive_occupied_attempts"] = 0
+        state["resolved_for_week"] = _current_week_key()
     else:
         logger.info(
             "Desktop occupied (attempt %s). Will retry tomorrow.",

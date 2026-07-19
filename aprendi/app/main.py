@@ -1,19 +1,20 @@
-"""NAS orchestrator skeleton.
+"""NAS orchestrator main loop.
 
-Phase 1 goal: prove the container + scheduling loop works reliably on the
-NAS before wiring in real logic (desktop state checks, Wake-on-LAN,
-source fetching, etc. — see ADR-0002 and the phase 1 plan for the full
-design this will eventually implement).
+Runs a heartbeat (for liveness visibility) and, on every tick, checks
+whether it's time to run the scheduled weekly desktop-availability check
+(Saturday/Sunday 2am — see scheduler.py and
+docs/decisions/0002-compute-orchestration-model.md).
 
-For now this just logs a heartbeat on an interval, so we can confirm:
-- the container starts and stays running
-- the memory limit set in docker-compose.yml is respected
-- logs are visible both via `docker logs` and the mounted log file
+This does not yet run the actual Weekly Learning Brief pipeline (source
+fetching, summarization, sending) — see scheduler.py's docstring for what
+happens today when the desktop is confirmed ready.
 """
 
 import logging
 import os
 import time
+
+from scheduler import run_scheduled_check_if_due
 
 LOG_DIR = "/app/logs"
 LOG_FILE = os.path.join(LOG_DIR, "orchestrator.log")
@@ -36,18 +37,37 @@ logger = logging.getLogger("orchestrator")
 
 
 def main() -> None:
-    """Run the orchestrator's main heartbeat loop.
+    """Run the orchestrator's main loop: heartbeat + scheduled check."""
+    desktop_ip = os.environ.get("DESKTOP_IP")
+    desktop_mac = os.environ.get("DESKTOP_MAC")
+    lan_broadcast_ip = os.environ.get("LAN_BROADCAST_IP")
 
-    This is intentionally minimal for the phase 1 skeleton. Future work
-    will replace or extend this loop with the actual scheduled job logic
-    (desktop state check, Wake-on-LAN, source fetch, etc.).
-    """
+    missing = [
+        name
+        for name, value in [
+            ("DESKTOP_IP", desktop_ip),
+            ("DESKTOP_MAC", desktop_mac),
+            ("LAN_BROADCAST_IP", lan_broadcast_ip),
+        ]
+        if not value
+    ]
+    if missing:
+        logger.error(
+            "Missing required environment variable(s): %s. Scheduled "
+            "checks will not run.",
+            ", ".join(missing),
+        )
+
     logger.info(
-        "Orchestrator skeleton started. Heartbeat every %s seconds.",
+        "Orchestrator started. Heartbeat every %s seconds.",
         HEARTBEAT_INTERVAL_SECONDS,
     )
     while True:
         logger.info("Heartbeat: orchestrator is alive.")
+        if not missing:
+            run_scheduled_check_if_due(
+                desktop_ip, desktop_mac, lan_broadcast_ip
+            )
         time.sleep(HEARTBEAT_INTERVAL_SECONDS)
 
 
